@@ -4,7 +4,6 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
-	"log"
 	"math/rand"
 	"net/url"
 	"sort"
@@ -33,7 +32,6 @@ func (s *SignSDK) signParams(sk string, urlParams url.Values) string {
 	}
 	keyValueArray = append(keyValueArray, "sk="+sk)
 	beSignStr := strings.Join(keyValueArray, "&")
-	log.Println(beSignStr)
 	hasher := md5.New()
 	hasher.Write([]byte(beSignStr))
 	return strings.ToUpper(hex.EncodeToString(hasher.Sum(nil)))
