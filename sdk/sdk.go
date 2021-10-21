@@ -62,11 +62,11 @@ func (s *SignSDK) GetSignedURL(api string) (string, error) {
 
 	query := urlObj.Query()
 
-	query.Add("appid", s.AppID)
-	query.Add("nonce_str", s.randomNonceStr(10))
-	query.Add("__t", fmt.Sprintf("%d", time.Now().Unix()))
+	query.Set("appid", s.AppID)
+	query.Set("nonce_str", s.randomNonceStr(10))
+	query.Set("__t", fmt.Sprintf("%d", time.Now().Unix()))
 	sign := s.signParams(s.SecretKey, query)
-	query.Add("sign", sign)
+	query.Set("sign", sign)
 	urlObj.RawQuery = query.Encode()
 	return urlObj.String(), nil
 }
