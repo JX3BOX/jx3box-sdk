@@ -9,10 +9,10 @@ import (
 
 func TestSDK(t *testing.T) {
 
-	api := "http://gatway.test.com/xxxx?a=1&xxx=2&xxx=23123"
+	api := "http://node.jx3box.com/skills"
 	sdk := SignSDK{
-		AppID:     "a",
-		SecretKey: "b",
+		AppID:     "test-jx3box",
+		SecretKey: "test-jx3box-2021-hello",
 	}
 
 	resourceURL2, _ := sdk.GetSignedURL(api)
