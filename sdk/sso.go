@@ -2,6 +2,7 @@ package sdk
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -69,6 +70,9 @@ func (s *SSO) GetResource(scope string, token string, data interface{}) error {
 
 	if err != nil {
 		return err
+	}
+	if response.StatusCode != 200 {
+		return fmt.Errorf("status code: %d message: %s", response.StatusCode, string(body))
 	}
 
 	return json.Unmarshal(body, data)
