@@ -16,10 +16,12 @@ jobs:
         with:
           node-version: 14
           registry-url: https://registry.npmjs.org/
-      - run: cd nodejs
-      - run: npm install -g typescript
-      - run: npm install
-      - run: tsc
-      - run: npm publish --access public
+      - name: npm publish
+        working-directory: ./nodejs
+        run: |
+          npm install -g typescript
+          npm install
+          tsc
+          npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
