@@ -1,7 +1,7 @@
 {
   "name": "@jx3box/sdk",
   "description": "JX3BOX公共资源sdk",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "dist/index.js",
   "license": "MIT",
   "author": "@jx3box",

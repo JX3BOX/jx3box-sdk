@@ -6,7 +6,7 @@
 package main
 
 import (
-    "github.com/JX3BOX/jx3box-sdk-golang/sdk"
+    "github.com/JX3BOX/jx3box-sdk/gosdk"
     "net/http"
 )
 
@@ -25,7 +25,7 @@ func main(){
 ### 使用
 
 ```shell
-go get -u github.com/JX3BOX/jx3box-sdk-golang/sdk
+go get -u github.com/JX3BOX/jx3box-sdk/gosdk
 ```
 
 demo

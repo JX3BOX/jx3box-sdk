@@ -1,4 +1,4 @@
-package sdk
+package gosdk
 
 import (
 	"encoding/json"
