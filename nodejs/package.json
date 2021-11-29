@@ -1,0 +1,16 @@
+{
+  "name": "@jx3box/sdk",
+  "description": "JX3BOX公共资源sdk",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "license": "MIT",
+  "author": "@jx3box",
+  "devDependencies": {
+    "@types/node": "^16.10.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JX3BOX/jx3box-sdk-nodejs.git"
+  },
+  "scripts": {}
+}
