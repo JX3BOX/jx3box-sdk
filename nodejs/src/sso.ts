@@ -56,12 +56,15 @@ export default class SSO {
                     }
                 });
             }
+            const errorHandler = (err: Error) => {
+                reject(`request error: ${err.message}`);
+            }
             switch (urlObj.protocol) {
                 case "https:":
-                    https.get(targetURL, responseHandle)
+                    https.get(targetURL, responseHandle).on('error', errorHandler);
                     break
                 case "http:":
-                    http.get(targetURL, responseHandle)
+                    http.get(targetURL, responseHandle).on('error', errorHandler);
             }
         })
     }
