@@ -17,12 +17,13 @@ export default class SSO {
 
     }
     // 获取sso登录页地址
-    public getLoginPage(params: { [key: string]: string }): string {
+    public getLoginPage(params: { [key: string]: string }, backto?: string): string {
         const urlObj = new URL(this.api)
         const query = urlObj.searchParams
         Object.keys(params).forEach(key => {
             query.set(key, params[key])
         })
+        query.set("__backto__", backto || "")
         urlObj.pathname = "/authorize"
         urlObj.search = query.toString()
         const sign = new Sign(this.appid, this.sk)

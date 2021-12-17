@@ -3,10 +3,11 @@ package gosdk
 import (
 	"crypto/md5"
 	"encoding/hex"
-	"fmt"
+	"encoding/json"
 	"math/rand"
 	"net/url"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -16,10 +17,47 @@ type SignSDK struct {
 	SecretKey string
 }
 
+type NeededSignParams map[string]string
+
+func (n NeededSignParams) ToJson() string {
+	signParamsBody, _ := json.Marshal(n)
+	return string(signParamsBody)
+}
+
+func (n NeededSignParams) ToString() string {
+	var keyArr []string
+	for k := range n {
+		keyArr = append(keyArr, k)
+	}
+	sort.Strings(keyArr)
+	var keyValueArray []string
+	for _, key := range keyArr {
+		keyValueArray = append(keyValueArray, key+"="+n[key])
+	}
+	return strings.Join(keyValueArray, "&")
+}
+
+// 签名算法
+// ?a=x&b=y&c=z&__app={xxx:xxxxx}
+// 对__app中的xxx:xxxxx 进行排序
+
 func (s *SignSDK) signParams(sk string, urlParams url.Values) string {
+
+	appInfo := urlParams.Get("__ak__")
+	if appInfo == "" {
+		return ""
+	}
+	var signParams NeededSignParams
+	if err := json.Unmarshal([]byte(appInfo), &signParams); err != nil {
+		return ""
+	}
+
 	var keyArr []string
 
 	for k := range urlParams {
+		if k == "__ak__" || k == "sign" {
+			continue
+		}
 		if v := urlParams[k]; len(v) == 0 {
 			continue
 		}
@@ -30,7 +68,7 @@ func (s *SignSDK) signParams(sk string, urlParams url.Values) string {
 	for _, key := range keyArr {
 		keyValueArray = append(keyValueArray, key+"="+strings.Join(urlParams[key], ","))
 	}
-	keyValueArray = append(keyValueArray, "sk="+sk)
+	keyValueArray = append(keyValueArray, signParams.ToString(), "sk="+sk)
 	beSignStr := strings.Join(keyValueArray, "&")
 	hasher := md5.New()
 	hasher.Write([]byte(beSignStr))
@@ -62,9 +100,13 @@ func (s *SignSDK) GetSignedURL(api string) (string, error) {
 
 	query := urlObj.Query()
 
-	query.Set("appid", s.AppID)
-	query.Set("nonce_str", s.randomNonceStr(10))
-	query.Set("__t", fmt.Sprintf("%d", time.Now().Unix()))
+	signParams := NeededSignParams{
+		"appid":   s.AppID,
+		"non_str": s.randomNonceStr(10),
+		"t":       strconv.FormatInt(time.Now().Unix(), 10),
+	}
+
+	query.Set("__ak__", signParams.ToJson())
 	sign := s.signParams(s.SecretKey, query)
 	query.Set("sign", sign)
 	urlObj.RawQuery = query.Encode()
@@ -72,5 +114,6 @@ func (s *SignSDK) GetSignedURL(api string) (string, error) {
 }
 
 func (s *SignSDK) CheckSign(beCheckSign string, urlParams url.Values) bool {
-	return beCheckSign == s.signParams(s.SecretKey, urlParams)
+	sign := s.signParams(s.SecretKey, urlParams)
+	return sign != "" && beCheckSign == sign
 }

@@ -1,6 +1,7 @@
 ## JX3BOX SDK
 
-获取jx3box资源，sso等sdk
+- 获取jx3box资源
+- SSO
 
 ### 支持
 

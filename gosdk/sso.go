@@ -14,7 +14,7 @@ type SSO struct {
 	API       string `yaml:"api"`
 }
 
-func (s *SSO) GetLoginPage(params map[string]string) (string, error) {
+func (s *SSO) GetLoginPage(params map[string]string, backTo ...string) (string, error) {
 
 	urlObj, err := url.Parse(s.API)
 	if err != nil {
@@ -23,9 +23,10 @@ func (s *SSO) GetLoginPage(params map[string]string) (string, error) {
 	query := urlObj.Query()
 	for k, v := range params {
 		query.Set(k, v)
-
 	}
-
+	if len(backTo) > 0 {
+		query.Set("__backto__", backTo[0])
+	}
 	urlObj.Path = "/authorize"
 	urlObj.RawQuery = query.Encode()
 
@@ -33,7 +34,6 @@ func (s *SSO) GetLoginPage(params map[string]string) (string, error) {
 		AppID:     s.AppID,
 		SecretKey: s.SecretKey,
 	}
-
 	return sign.GetSignedURL(urlObj.String())
 
 }

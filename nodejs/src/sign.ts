@@ -1,5 +1,4 @@
 import * as crypto from "crypto"
-import * as http from "http"
 import { URLSearchParams, URL } from "url"
 
 class SignSDK {
@@ -9,19 +8,35 @@ class SignSDK {
         this.appid = appid;
         this.secretKey = secretKey;
     }
+    public checkSign(beCheckSign: string | null, urlParams: URLSearchParams): boolean {
+        const sign = this.signParams(urlParams)
+        return sign !== "" && sign === beCheckSign
+    }
     private signParams(params: URLSearchParams): string {
+        const appInfo = params.get("__ak__")
+        if (!appInfo) {
+            return ""
+        }
+        const appInfoObj = JSON.parse(appInfo)
+        const appInfoArr = Object.keys(appInfoObj).sort()
+        const appInfoStr = appInfoArr.map(key => `${key}=${appInfoObj[key]}`).join("&")
+
         const keyMaps: { [key: string]: boolean } = {}
         for (let key of params.keys()) {
+            if (key == "__ak__" || key == "sign") {
+                continue
+            }
             keyMaps[key] = true
         }
-        const keys = Object.keys(keyMaps)
-        keys.sort()
-        const values: Array<string> = []
-        keys.forEach((key: string) => { values.push(key + '=' + params.getAll(key).join(",")) })
+        const keys = Object.keys(keyMaps).sort()
+        const values: Array<string> = keys.map((key: string) => { return key + '=' + params.getAll(key).join(",") })
+        values.push(appInfoStr)
         values.push("sk=" + this.secretKey)
+
         const beSignStr = values.join("&")
         const sign = crypto.createHash('md5').update(beSignStr).digest("hex");
         return sign.toUpperCase()
+
     }
     private random(length: number): string {
         var result = '';
@@ -37,9 +52,14 @@ class SignSDK {
         const urlObj = new URL(urlRaw)
 
         const search = urlObj.searchParams
-        search.set("appid", this.appid)
-        search.set("nonce_str", this.random(10))
-        search.set("__t", (Date.now() / 1000).toFixed())
+
+        const signParams = {
+            "appid": this.appid,
+            "non_str": this.random(10),
+            "t": (Date.now() / 1000).toFixed()
+        }
+
+        search.set("__ak__", JSON.stringify(signParams))
 
         const sign = this.signParams(search)
 
