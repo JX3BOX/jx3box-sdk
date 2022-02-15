@@ -20,7 +20,7 @@ func TestSDK(t *testing.T) {
 	urlObj, _ := url.Parse(resourceURL2)
 	query := urlObj.Query()
 
-	log.Println(sdk.CheckSign(query.Get("sign"), query))
+	log.Println(sdk.CheckSign(query.Get("_jx3box_sign_"), query))
 
 	// var client = http.Client{}
 	// request2, _ := http.NewRequest("GET", resourceURL2, nil)

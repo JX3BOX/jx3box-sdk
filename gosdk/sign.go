@@ -4,7 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
-	"math/rand"
+	"math"
 	"net/url"
 	"sort"
 	"strconv"
@@ -15,8 +15,10 @@ import (
 type SignSDK struct {
 	AppID     string
 	SecretKey string
+	Timeout   int64 // 时间戳超时时间，单位：秒
 }
 
+// 必备签名参数
 type NeededSignParams map[string]string
 
 func (n NeededSignParams) ToJson() string {
@@ -27,6 +29,9 @@ func (n NeededSignParams) ToJson() string {
 func (n NeededSignParams) ToString() string {
 	var keyArr []string
 	for k := range n {
+		if v := n[k]; len(v) == 0 {
+			continue
+		}
 		keyArr = append(keyArr, k)
 	}
 	sort.Strings(keyArr)
@@ -37,25 +42,33 @@ func (n NeededSignParams) ToString() string {
 	return strings.Join(keyValueArray, "&")
 }
 
+const APPInfoInKey = "_jx3box_ak_"
+const SignResultKey = "_jx3box_sign_"
+
+// 时间戳校验
+// 正负5分钟均可通过
+func (s *SignSDK) isLegalTime(timeRaw string) bool {
+	timeoutMax := int64(5 * 60)
+	if s.Timeout > 0 {
+		timeoutMax = s.Timeout
+	}
+
+	i, err := strconv.ParseInt(timeRaw, 10, 64)
+	if err != nil {
+		return false
+	}
+	return math.Abs(float64(time.Now().Unix()-i)) < float64(timeoutMax)
+}
+
 // 签名算法
-// ?a=x&b=y&c=z&__app={xxx:xxxxx}
-// 对__app中的xxx:xxxxx 进行排序
-
-func (s *SignSDK) signParams(sk string, urlParams url.Values) string {
-
-	appInfo := urlParams.Get("__ak__")
-	if appInfo == "" {
-		return ""
-	}
-	var signParams NeededSignParams
-	if err := json.Unmarshal([]byte(appInfo), &signParams); err != nil {
-		return ""
-	}
-
+// @params sk <string> 密钥
+// @params urlParams <url.Values> 待签名计算参数, 其中 _jx3box_ak_ 参数中包含了 appid 和 nonce_str
+// @return string 签名结果
+func (s *SignSDK) signParams(sk string, urlParams url.Values, appInfo NeededSignParams) string {
+	// 计算url原有参数
 	var keyArr []string
-
 	for k := range urlParams {
-		if k == "__ak__" || k == "sign" {
+		if k == APPInfoInKey || k == SignResultKey {
 			continue
 		}
 		if v := urlParams[k]; len(v) == 0 {
@@ -68,30 +81,15 @@ func (s *SignSDK) signParams(sk string, urlParams url.Values) string {
 	for _, key := range keyArr {
 		keyValueArray = append(keyValueArray, key+"="+strings.Join(urlParams[key], ","))
 	}
-	keyValueArray = append(keyValueArray, signParams.ToString(), "sk="+sk)
+	// 合并url原有参数，app信息，密钥，然后计算sign值
+	keyValueArray = append(keyValueArray, appInfo.ToString(), "sk="+sk)
 	beSignStr := strings.Join(keyValueArray, "&")
 	hasher := md5.New()
 	hasher.Write([]byte(beSignStr))
 	return strings.ToUpper(hex.EncodeToString(hasher.Sum(nil)))
 }
 
-const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-const (
-	letterIdxBits = 6                    // 6 bits to represent a letter index
-	letterIdxMask = 1<<letterIdxBits - 1 // All 1-bits, as many as letterIdxBits
-)
-
-func (s *SignSDK) randomNonceStr(n int) string {
-	b := make([]byte, n)
-	for i := 0; i < n; {
-		if idx := int(rand.Int63() & letterIdxMask); idx < len(letterBytes) {
-			b[i] = letterBytes[idx]
-			i++
-		}
-	}
-	return string(b)
-}
-
+// 获取签名后的url
 func (s *SignSDK) GetSignedURL(api string) (string, error) {
 	urlObj, err := url.Parse(api)
 	if err != nil {
@@ -102,18 +100,32 @@ func (s *SignSDK) GetSignedURL(api string) (string, error) {
 
 	signParams := NeededSignParams{
 		"appid":   s.AppID,
-		"non_str": s.randomNonceStr(10),
+		"non_str": randomNonceStr(10),
 		"t":       strconv.FormatInt(time.Now().Unix(), 10),
 	}
 
-	query.Set("__ak__", signParams.ToJson())
-	sign := s.signParams(s.SecretKey, query)
-	query.Set("sign", sign)
+	query.Set(APPInfoInKey, signParams.ToJson())
+	sign := s.signParams(s.SecretKey, query, signParams)
+	query.Set(SignResultKey, sign)
+	query.Set(APPInfoInKey, signParams.ToString())
 	urlObj.RawQuery = query.Encode()
 	return urlObj.String(), nil
 }
 
 func (s *SignSDK) CheckSign(beCheckSign string, urlParams url.Values) bool {
-	sign := s.signParams(s.SecretKey, urlParams)
+	appInfo := urlParams.Get(APPInfoInKey)
+	if appInfo == "" {
+		return false
+	}
+	var signParams NeededSignParams
+	if err := json.Unmarshal([]byte(appInfo), &signParams); err != nil {
+		return false
+	}
+	// 时间戳校验
+	if !s.isLegalTime(signParams["t"]) {
+		return false
+	}
+	// 签名校验
+	sign := s.signParams(s.SecretKey, urlParams, signParams)
 	return sign != "" && beCheckSign == sign
 }
